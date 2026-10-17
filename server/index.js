@@ -91,7 +91,7 @@ async function start() {
 }
 
 if (require.main === module) {
-  start().catch(e => { console.error('啟動失敗：', e); process.exit(1); });
+  start().catch(e => { console.error('啟動失敗：' + e.message); if (process.env.NODE_ENV !== 'production') console.error(e); process.exit(1); });
 }
 
 module.exports = { createApp };
