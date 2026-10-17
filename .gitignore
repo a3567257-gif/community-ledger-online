@@ -1,0 +1,5 @@
+node_modules/
+local-data/
+.env
+.devtmp/
+*.log

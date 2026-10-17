@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>社區AI帳房 後台</title>
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <div class="header-row">
+    <div>
+      <h1>社區AI帳房｜後台管理</h1>
+      <p id="header-sub">載入中…</p>
+    </div>
+    <div class="header-user">
+      <span id="user-label"></span>
+      <a href="/" class="header-link">回到記帳畫面</a>
+      <button class="header-link" id="btn-logout">登出</button>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <button class="tab-btn active" data-tab="communities">社區總覽</button>
+  <button class="tab-btn" data-tab="users">帳號管理</button>
+  <button class="tab-btn" data-tab="audit">操作紀錄</button>
+</nav>
+
+<main>
+  <section id="tab-communities" class="panel active">
+    <div class="card">
+      <p class="muted" style="margin-top:0;">每個社區目前的記帳進度。「本期」落後今天 2 期以上，代表社區可能忘了做月結。點社區名稱直接進入該社區的記帳畫面。</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>物業公司</th><th>社區</th><th>本期</th><th>本期帳款</th><th class="num-col">住戶</th><th class="num-col">欠繳戶數</th><th class="num-col">欠繳金額</th><th>授權</th><th>最後更新</th><th></th></tr></thead>
+          <tbody id="community-rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" id="edit-community-card" hidden>
+      <p style="margin:0 0 10px;"><b id="ec-title">社區設定</b></p>
+      <div class="form-grid admin-grid">
+        <div class="field"><label>社區名稱（後台顯示用）</label><input id="ec-name"></div>
+        <div class="field"><label>授權到哪一期</label><input id="ec-license" type="month"></div>
+        <div class="field"><label>狀態</label><select id="ec-active"><option value="1">使用中</option><option value="0">停用（所有人都進不去，資料保留）</option></select></div>
+      </div>
+      <p class="muted">授權那一期可以完整做完月結；社區結帳進入下一期，或超過授權期別結束後 20 天，系統會變成唯讀（可以查看、匯出、下載備份，不能改帳）。</p>
+      <div style="display:flex; gap:8px;">
+        <button class="btn" id="btn-save-community">儲存</button>
+        <button class="btn secondary" id="btn-cancel-community">取消</button>
+      </div>
+      <p class="muted" id="ec-status"></p>
+    </div>
+
+    <div class="card super-only" hidden>
+      <p style="margin:0 0 10px;"><b>新增社區</b><span class="muted">　正式社區是空白的，社區第一次登入時照「開帳檢查清單」設定；示範社區會載入虛構的幸福花園社區（36 戶）。</span></p>
+      <div class="form-grid admin-grid">
+        <div class="field"><label>物業公司</label><select id="nc-company"></select></div>
+        <div class="field"><label>社區名稱</label><input id="nc-name" placeholder="例如：○○社區管理委員會"></div>
+        <div class="field"><label>版本</label><select id="nc-edition"><option value="formal">正式</option><option value="demo">示範（虛構資料）</option></select></div>
+        <div class="field"><label>授權到哪一期</label><input id="nc-license" type="month"></div>
+      </div>
+      <button class="btn" id="btn-new-community" style="margin-top:10px;">新增社區</button>
+      <p class="muted" id="nc-status"></p>
+    </div>
+
+    <div class="card super-only" hidden>
+      <p style="margin:0 0 10px;"><b>物業公司</b></p>
+      <div id="company-list" class="muted"></div>
+      <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; max-width:520px;">
+        <input id="new-company-name" placeholder="新增物業公司名稱" style="flex:1; min-width:200px;">
+        <button class="btn" id="btn-new-company">新增物業公司</button>
+      </div>
+      <p class="muted" id="company-status"></p>
+    </div>
+  </section>
+
+  <section id="tab-users" class="panel">
+    <div class="card">
+      <div class="scroll">
+        <table>
+          <thead><tr><th>帳號</th><th>姓名</th><th>身分</th><th>物業公司</th><th>可使用的社區</th><th>狀態</th><th>最後登入</th><th></th></tr></thead>
+          <tbody id="user-rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" id="edit-user-card" hidden>
+      <p style="margin:0 0 10px;"><b id="eu-title">修改帳號</b></p>
+      <div class="form-grid admin-grid">
+        <div class="field"><label>姓名</label><input id="eu-name"></div>
+        <div class="field"><label>重設密碼（留空＝不變更，至少 8 個字元）</label><input id="eu-password" type="password" autocomplete="new-password"></div>
+        <div class="field"><label>狀態</label><select id="eu-active"><option value="1">使用中</option><option value="0">停用</option></select></div>
+      </div>
+      <div class="field" id="eu-communities-wrap" style="margin-top:10px;"><label class="muted">可使用的社區</label><div id="eu-communities" class="check-list"></div></div>
+      <div style="margin-top:10px; display:flex; gap:8px;">
+        <button class="btn" id="btn-save-user">儲存</button>
+        <button class="btn secondary" id="btn-cancel-user">取消</button>
+      </div>
+      <p class="muted" id="eu-status"></p>
+    </div>
+
+    <div class="card">
+      <p style="margin:0 0 10px;"><b>新增帳號</b><span class="muted">　社區經理／秘書只能進入勾選的社區；物業公司管理者可以看自己公司所有社區、管理自己公司的社區帳號。</span></p>
+      <div class="form-grid admin-grid">
+        <div class="field"><label>帳號（英文、數字）</label><input id="nu-login" autocomplete="off"></div>
+        <div class="field"><label>姓名</label><input id="nu-name"></div>
+        <div class="field"><label>密碼（至少 8 個字元）</label><input id="nu-password" type="password" autocomplete="new-password"></div>
+        <div class="field"><label>身分</label><select id="nu-role"></select></div>
+        <div class="field" id="nu-company-wrap"><label>物業公司</label><select id="nu-company"></select></div>
+      </div>
+      <div class="field" id="nu-communities-wrap" style="margin-top:10px;"><label class="muted">可使用的社區</label><div id="nu-communities" class="check-list"></div></div>
+      <button class="btn" id="btn-new-user" style="margin-top:10px;">新增帳號</button>
+      <p class="muted" id="nu-status"></p>
+    </div>
+  </section>
+
+  <section id="tab-audit" class="panel">
+    <div class="card">
+      <div class="toolbar">
+        <p class="muted" style="margin:0;">誰在什麼時候做了什麼（最近 300 筆）。操作紀錄只能新增，不能修改或刪除。</p>
+        <select id="audit-community" style="width:auto;"></select>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>時間</th><th>社區</th><th>帳號</th><th>動作</th><th>內容</th></tr></thead>
+          <tbody id="audit-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="admin.js"></script>
+</body>
+</html>

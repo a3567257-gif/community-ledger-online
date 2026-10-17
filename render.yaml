@@ -1,0 +1,23 @@
+# Render 部署設定（Blueprint）。在 Render 選「New → Blueprint」並連到這個 GitHub 儲存庫就會照這裡建立網站。
+services:
+  - type: web
+    name: community-ledger-online
+    runtime: node
+    plan: free            # 有付費客戶後改成 starter（不休眠）
+    region: singapore
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TZ
+        value: Asia/Taipei
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false       # 部署時貼上 Neon 的連線網址
+      - key: ADMIN_LOGIN
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false

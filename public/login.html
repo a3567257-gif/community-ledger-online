@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>社區AI帳房 登入</title>
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="card login-card">
+  <img src="logo.png" alt="樓管家 智慧科技" class="gate-logo">
+  <h2 style="margin-top:0;">社區AI帳房</h2>
+  <p class="muted">請輸入帳號和密碼。</p>
+  <form id="login-form">
+    <label class="muted" for="login">帳號</label>
+    <input id="login" name="login" autocomplete="username" required>
+    <label class="muted" for="password">密碼</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <button class="btn" type="submit" id="btn-login">登入</button>
+  </form>
+  <p class="muted" id="login-error" style="color:var(--danger-tx);"></p>
+  <p class="muted" style="margin-bottom:0;">忘記密碼請聯絡物業公司管理者或系統提供者重設。</p>
+</div>
+<script src="login.js"></script>
+</body>
+</html>

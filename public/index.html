@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>社區AI帳房</title>
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="boot-loading" class="muted" style="text-align:center; margin:80px auto;">載入中…</div>
+
+<div id="no-community" class="card" style="max-width:520px; margin:40px auto; display:none;">
+  <img src="logo.png" alt="樓管家 智慧科技" class="gate-logo">
+  <h2 style="margin-top:0;">社區AI帳房</h2>
+  <p class="muted" id="no-community-msg">您的帳號目前沒有可以使用的社區，請聯絡物業公司管理者或系統提供者。</p>
+  <button class="btn secondary" id="btn-logout-empty">登出</button>
+</div>
+
+<div id="app-shell" style="display:none;">
+
+<header>
+  <div class="header-row">
+    <div>
+      <h1><span id="header-title">社區AI帳房</span> <span class="chip edition-chip" id="edition-badge" hidden>示範版・虛構資料</span></h1>
+      <p id="header-sub">載入中…</p>
+    </div>
+    <div class="header-user">
+      <select id="community-switch" aria-label="切換社區" hidden></select>
+      <span id="user-label"></span>
+      <a href="/admin" id="link-admin" class="header-link" hidden>後台管理</a>
+      <button class="header-link" id="btn-logout">登出</button>
+    </div>
+  </div>
+  <div style="display:flex; align-items:center; gap:10px; margin-top:6px; flex-wrap:wrap;">
+    <span class="chip" id="license-badge"></span>
+    <details id="demo-samples" class="demo-samples" hidden>
+      <summary>下載示範檔案</summary>
+      <div class="demo-samples-list">
+        <button class="link" data-demo-sample="1">示範1_住戶資料.xlsx</button>
+        <button class="link" data-demo-sample="2">示範2_未繳名單.xlsx</button>
+        <button class="link" data-demo-sample="3">示範3_預繳名單.xlsx</button>
+        <button class="link" data-demo-sample="4">示範4_銀行明細_115年07月.xlsx</button>
+      </div>
+    </details>
+  </div>
+</header>
+
+<nav>
+  <button class="tab-btn active" data-tab="households">住戶總覽</button>
+  <button class="tab-btn" data-tab="rates">費率設定</button>
+  <button class="tab-btn" data-tab="preview">本期試算與核對</button>
+  <button class="tab-btn" data-tab="bank">銀行明細比對</button>
+  <button class="tab-btn" data-tab="unpaid">未繳名單</button>
+  <button class="tab-btn" data-tab="prepaid">預繳名單</button>
+  <button class="tab-btn" data-tab="reports">月結報表</button>
+  <button class="tab-btn" data-tab="backup">備份・帳號</button>
+</nav>
+
+<main>
+
+  <div class="card license-banner" id="license-banner" hidden></div>
+
+  <div class="card period-lag" id="period-lag" hidden></div>
+
+  <div class="card setup-card" id="setup-card" hidden>
+    <div class="row-between">
+      <div><b>開帳檢查清單</b><span class="muted">　社區第一次使用時依序完成，全部完成後這張清單會自動消失。</span></div>
+    </div>
+    <ol class="setup-list" id="setup-list"></ol>
+  </div>
+
+  <section id="tab-households" class="panel active">
+    <div class="card" id="edit-card" style="display:none;">
+      <div class="form-grid" id="edit-form"></div>
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <button class="btn" id="btn-save">儲存</button>
+        <button class="btn secondary" id="btn-cancel">取消</button>
+        <button class="btn secondary" id="btn-delete-household" style="margin-left:auto; color:var(--danger-tx);">刪除這一戶</button>
+      </div>
+      <p class="muted" id="edit-error" style="color:var(--danger-tx);"></p>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <div class="stat" style="margin-bottom:0;">
+          <div><b id="stat-total">-</b><span>住戶數</span></div>
+          <div><b id="stat-paid">-</b><span>已繳（上期）</span></div>
+          <div><b id="stat-unpaid">-</b><span>未繳／部分繳（上期）</span></div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn secondary" data-template="households">下載空白範本</button>
+          <button class="btn" id="btn-import-households">匯入住戶資料（Excel）</button>
+        </div>
+      </div>
+      <p class="muted">社區第一次使用時，先下載空白範本填好，再一次匯入所有住戶。必填：戶號（例如 260-1F）、虛擬帳號；其他欄位（類型、坪數、車位狀態、清潔費、租金）依實際情況填。每坪單價、公共基金、修繕基金依「費率設定」頁的統一設定計算。匯入只會新增住戶，不會刪除或覆蓋原有資料。</p>
+      <div id="household-last-import" class="undo-line" hidden></div>
+      <div id="import-status" class="import-result" style="display:none;"></div>
+      <div id="rate-missing-warning" class="warn-banner" hidden></div>
+      <div class="scroll">
+        <table>
+          <thead><tr>
+            <th>序號</th><th>戶號</th><th>類型</th><th>帳號</th><th>坪數</th>
+            <th>每坪單價</th><th>公共基金</th><th>修繕基金提撥</th>
+            <th>汽車（清潔費／租金）</th><th>機車（清潔費／租金）</th><th>每月應繳金額</th><th>上期狀態</th><th></th>
+          </tr></thead>
+          <tbody id="household-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-rates" class="panel">
+    <div class="card">
+      <p style="margin:0 0 10px;"><b>社區設定</b></p>
+      <div class="form-grid" style="grid-template-columns: 2fr 1fr 1fr; align-items:end;">
+        <div class="field"><label>社區名稱（顯示在畫面上方和月結報表）</label><input id="community-name" type="text" placeholder="例如：○○社區管理委員會"></div>
+        <div class="field"><label>每月結算日</label><select id="closing-day"></select></div>
+        <div class="field"><label>本期（開始記帳的月份）</label><select id="current-period"></select></div>
+      </div>
+      <p class="muted" id="period-range-hint" style="margin-top:8px;"></p>
+      <button class="btn" id="btn-save-community" style="margin-top:4px;">儲存社區設定</button>
+      <p class="muted" id="community-save-status" style="margin-top:8px;"></p>
+    </div>
+    <div class="card">
+      <p class="muted">這些金額會隨社區調整而變動，統一在這裡設定，所有住戶的試算會一起更新。</p>
+      <div class="form-grid" id="rate-form" style="grid-template-columns: repeat(3, 1fr);"></div>
+      <button class="btn" id="btn-save-rates" style="margin-top:14px;">儲存費率設定</button>
+      <p class="muted" id="rate-save-status" style="margin-top:8px;"></p>
+    </div>
+    <div class="card">
+      <p class="muted" style="margin:0 0 8px;">歷史費率版本：社區歷年調整過的費率紀錄，交接下一任社區主任時可以直接對照這份紀錄，不用再翻舊會議紀錄。</p>
+      <div class="scroll">
+        <table>
+          <thead><tr>
+            <th>生效期間</th><th>各類別每坪單價</th><th>公共基金</th><th>修繕基金提撥</th>
+            <th>年繳優惠</th><th>半年繳優惠</th>
+          </tr></thead>
+          <tbody id="rate-history-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-preview" class="panel">
+    <div class="card">
+      <p class="muted">依住戶目前登記的類型、坪數、車位費等資料，即時試算本期應收金額（四捨五入到整數），並跟上期實際入帳金額比對，只列出「金額有變動」的住戶。</p>
+      <div id="changes-list"></div>
+      <button class="btn" id="btn-generate" style="margin-top:12px;">確認無誤，產生本期應收帳款</button>
+      <p class="muted" id="generate-status" style="margin-top:8px;"></p>
+    </div>
+    <div class="card">
+      <p style="margin:0 0 10px;" id="receivables-title"></p>
+      <div class="scroll">
+        <table>
+          <thead><tr>
+            <th>戶號</th><th>類型</th><th class="num-col">坪數</th>
+            <th class="num-col">管理費</th><th class="num-col">公共基金</th><th class="num-col">修繕基金</th><th class="num-col">車位費</th>
+            <th class="num-col">本期應收</th><th class="num-col">已收</th><th class="num-col">未收</th><th>狀態</th><th>備註</th>
+          </tr></thead>
+          <tbody id="receivables-rows"></tbody>
+        </table>
+      </div>
+      <p class="muted" style="margin:8px 0 0;">已收：本期銀行明細沖帳、期初已繳或之前預繳到這一期的金額合計。銀行明細匯入後這張表會自動更新。</p>
+    </div>
+  </section>
+
+  <section id="tab-bank" class="panel">
+    <div class="card">
+      <p class="muted">依「先補前期欠款 → 再抵當月 → 剩餘轉預繳」規則自動判定月份歸屬。需先在「本期試算與核對」頁產生本期帳款，這裡才有本期未繳金額可以沖抵。</p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+        <button class="btn secondary" data-template="bank">下載空白範本</button>
+        <button class="btn" id="btn-pick-file">選擇銀行明細 Excel 檔案</button>
+      </div>
+      <p class="muted">欄位與日期照銀行格式（例如交易日期 1150715）。只放住戶繳的管理費收入；同一戶一個月繳兩次以上，各列一行，系統依交易日期先後沖帳。</p>
+      <p class="muted" id="bank-status"></p>
+    </div>
+    <div class="card" id="bank-imports-card" hidden>
+      <p style="margin:0 0 8px;"><b>本期銀行明細匯入紀錄</b><span class="muted">　匯錯檔案時，可以把「最後一次」匯入復原，再重新匯入正確的檔案。要復原比較早的匯入，請從最後一次開始往回復原。</span></p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>匯入時間</th><th>檔案</th><th class="num-col">筆數</th><th class="num-col">金額合計</th><th>狀態</th><th></th></tr></thead>
+          <tbody id="bank-imports-rows"></tbody>
+        </table>
+      </div>
+      <p class="muted" id="bank-undo-status" style="margin:8px 0 0;"></p>
+    </div>
+    <div id="bank-rejected"></div>
+    <div id="bank-results"></div>
+    <div id="bank-unmatched"></div>
+  </section>
+
+  <section id="tab-unpaid" class="panel">
+    <div class="card">
+      <div class="toolbar">
+        <p class="muted" style="margin:0;">社區第一次使用系統時，把目前每一戶「還欠哪幾個月、還欠多少」登記進來；之後每個月銀行明細比對完，這份名單會自動更新。</p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn secondary" data-template="unpaid">下載空白範本</button>
+          <button class="btn secondary" id="btn-clear-unpaid" style="color:var(--danger-tx);" hidden>清除期初未繳名單</button>
+          <button class="btn" id="btn-import-unpaid">匯入未繳名單（Excel）</button>
+        </div>
+      </div>
+      <p class="muted">第 1 列報表標題、第 2 列欄位名稱：「戶號」加上每個月一欄，月份寫成 115/06。金額填「這個月還欠多少」，不欠的月份留空。</p>
+      <p class="muted" id="unpaid-import-status"></p>
+      <div id="unpaid-warnings"></div>
+      <div class="scroll">
+        <table>
+          <thead id="unpaid-head"></thead>
+          <tbody id="unpaid-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-prepaid" class="panel">
+    <div class="card">
+      <div class="toolbar">
+        <p class="muted" style="margin:0;">社區第一次使用系統時，把目前每一戶已經提前繳到哪個月登記進來；之後每個月銀行明細比對完，這份名單會自動更新。</p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn secondary" data-template="prepaid">下載空白範本</button>
+          <button class="btn secondary" id="btn-clear-prepaid" style="color:var(--danger-tx);" hidden>清除期初預繳名單</button>
+          <button class="btn" id="btn-import-prepaid">匯入預繳名單（Excel）</button>
+        </div>
+      </div>
+      <p class="muted">第 1 列報表標題、第 2 列欄位名稱：「戶號」加上每個月一欄，月份寫成 115/08。只有<b>本期之後</b>的月份才算預繳。本期那一欄有金額，代表這個月在系統啟用前就繳過了，會登記為「本期已繳（期初）」，不算預繳、也不算欠繳；本期以前的月份不會匯入。金額跟系統試算月費對不上的會列在下面提醒您核對。</p>
+      <p class="muted" id="prepaid-import-status"></p>
+      <div id="prepaid-warnings"></div>
+      <div class="scroll">
+        <table>
+          <thead id="prepaid-head"></thead>
+          <tbody id="prepaid-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-reports" class="panel">
+    <div class="card" id="close-card">
+      <div class="toolbar">
+        <div>
+          <b>本期結帳</b>
+          <p class="muted" style="margin:4px 0 0;" id="close-info"></p>
+        </div>
+        <button class="btn" id="btn-close-period">本期結帳</button>
+      </div>
+      <p class="muted" style="margin:0;">每個月做完銀行明細比對、匯出月結報表後按這裡，系統才會進入下一期。結帳前會自動備份一份，結錯了可以到「備份與還原」找 before-close 開頭的備份還原。</p>
+      <p class="muted" id="close-status" style="margin-top:8px;"></p>
+    </div>
+    <div class="card">
+      <div class="toolbar">
+        <p class="muted" style="margin:0;">本期（依銀行明細比對產生的入帳紀錄）管理費收入明細。</p>
+        <button class="btn" id="btn-export-report">匯出本期月結報表（Excel）</button>
+      </div>
+      <p class="muted" id="report-export-status"></p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>入帳日期</th><th>戶號</th><th>帳號</th><th>繳款期別</th><th>前期補繳</th><th>本期管理費</th><th>預繳</th><th>合計</th></tr></thead>
+          <tbody id="income-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-backup" class="panel">
+    <div class="card" id="license-card">
+      <p class="muted" style="margin:0 0 8px;"><b>授權資訊</b></p>
+      <div id="license-info"></div>
+    </div>
+    <div class="card">
+      <p class="muted">帳務資料存在雲端資料庫，每天第一次修改後系統會自動存一份快照（保留 60 天）；結帳、復原匯入、還原等重要動作之前也會自動存一份。
+      建議每個月結帳後按「下載目前資料」，在社區電腦或隨身碟另外留一份，萬一需要時可以用「上傳備份檔還原」。</p>
+      <div id="backup-info"></div>
+      <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn" id="btn-export-backup">下載目前資料（備份檔）</button>
+        <button class="btn secondary" id="btn-restore-file">上傳備份檔還原…</button>
+      </div>
+      <p class="muted" id="backup-action-status" style="margin-top:8px;"></p>
+    </div>
+    <div class="card">
+      <p class="muted" style="margin:0 0 8px;">系統自動備份（快照）：</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>名稱</th><th>時間</th><th>大小</th><th></th></tr></thead>
+          <tbody id="backup-rows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" id="password-settings-card">
+      <p class="muted" style="margin:0 0 8px;"><b>變更我的登入密碼</b>：密碼至少 8 個字元。變更後，其他電腦或手機上的登入會自動登出。忘記密碼請聯絡物業公司管理者或系統提供者重設。</p>
+      <p class="muted" id="password-status"></p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <input type="password" id="pw-current" placeholder="目前密碼" autocomplete="current-password" style="width:220px;">
+        <input type="password" id="pw-new" placeholder="新密碼（至少 8 個字元）" autocomplete="new-password" style="width:220px;">
+        <button class="btn" id="btn-save-password">變更密碼</button>
+      </div>
+      <p class="muted" id="password-save-status" style="margin-top:8px;"></p>
+    </div>
+    <div class="card" id="reset-demo-card">
+      <p class="muted" style="margin:0 0 8px;"><b>還原成示範資料</b>（示範版專用）：回到剛安裝好的「幸福花園社區（示範）」，36 戶、本期 115/07，還沒匯入任何名單和銀行明細。每次向客戶展示前按一次，就能照示範流程從頭操作。<br>
+      還原前系統會自動把目前資料備份一份（檔名以 before-reset-demo 開頭）。</p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <button class="btn" id="btn-reset-demo">還原成示範資料</button>
+      </div>
+      <p class="muted" id="reset-demo-status" style="margin-top:8px;"></p>
+    </div>
+    <div class="card" id="blank-community-card">
+      <p class="muted" style="margin:0 0 8px;"><b>開始一個全新的空白社區</b>（示範社區專用）：清空目前所有住戶、帳款、銀行對帳紀錄與費率設定，變成一個空白系統，用來正式交給一個新社區使用，或拿另一個社區的真實資料做測試。<br>
+      <b>清空前系統會自動把目前的完整資料備份一份</b>（檔名以 before-new-community 開頭，會出現在上方備份清單），想回到清空前的狀態，在清單上按「還原這份備份」即可。</p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <input type="text" id="blank-confirm" placeholder="請輸入「清空」兩個字確認" style="width:220px;">
+        <button class="btn secondary" id="btn-start-blank" style="color:var(--danger-tx);">清空並開始新社區</button>
+      </div>
+      <p class="muted" id="blank-status" style="margin-top:8px;"></p>
+    </div>
+  </section>
+
+</main>
+
+</div>
+
+<script src="api-web.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

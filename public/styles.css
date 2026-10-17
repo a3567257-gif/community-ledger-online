@@ -1,0 +1,145 @@
+[hidden] { display: none !important; }
+:root {
+  /* 主色：咖啡 × 米色 */
+  --bg: #F3ECE1;          /* 米色底 */
+  --surface: #FFFDF8;     /* 卡片：暖白 */
+  --ink: #3B2A1E;         /* 深咖啡文字 */
+  --ink-soft: #7A6553;    /* 次要文字 */
+  --line: #E3D6C3;        /* 框線 */
+  --line-soft: #EFE6D8;   /* 表格細線、中性底 */
+  --accent: #7B4F2C;      /* 咖啡：主要按鈕、選中頁籤 */
+  --accent-dark: #5E3A1F;
+  --header-bg: #4A3222;   /* 頂部深咖啡色帶 */
+  --header-ink: #F6EEE2;
+  --header-ink-soft: #D8C6B0;
+  /* 狀態色 */
+  --success-bg: #E4F1E7; --success-tx: #2E7D4F;   /* 已繳 */
+  --warning-bg: #FBEFD9; --warning-tx: #A15C07;   /* 部分繳、前期補繳 */
+  --danger-bg: #F9E3DF;  --danger-tx: #B3261E;    /* 欠繳（紅字） */
+  --accent2-bg: #F1E6D8; --accent2-tx: #7B4F2C;   /* 當月管理費、自有車位 */
+  --pro-bg: #E3EDF8;     --pro-tx: #1F5FA8;       /* 預繳（藍字）、優惠備註 */
+}
+* { box-sizing: border-box; }
+body { margin:0; font-family: -apple-system, "Microsoft JhengHei", sans-serif; background:var(--bg); color:var(--ink); }
+header { padding: 18px 28px 14px; background: var(--header-bg); color: var(--header-ink); }
+header h1 { font-size: 20px; margin:0 0 2px; }
+header p { font-size: 12px; color: var(--header-ink-soft); margin:0; }
+nav { display:flex; gap:6px; padding: 12px 28px 0; border-bottom:1px solid var(--line); }
+nav button { border:none; background:none; padding:10px 16px; font-size:13px; cursor:pointer; color:var(--ink-soft); border-bottom:2px solid transparent; }
+nav button.active { color: var(--ink); font-weight:600; border-bottom-color: var(--accent); }
+main { padding: 20px 28px 60px; max-width: 1240px; }
+.panel { display:none; }
+.panel.active { display:block; }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:16px; }
+table { width:100%; border-collapse: collapse; font-size:12.5px; }
+th { text-align:left; padding:6px 7px; color:var(--ink-soft); font-weight:600; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--surface); white-space:nowrap; }
+td { padding:5px 7px; border-bottom:1px solid var(--line-soft); white-space:nowrap; }
+tbody tr:hover td { background: #FBF6EE; }
+.scroll { max-height: 500px; overflow:auto; border:1px solid var(--line); border-radius:8px; }
+.chip { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; }
+.chip.success { background:var(--success-bg); color:var(--success-tx); }
+.chip.warning { background:var(--warning-bg); color:var(--warning-tx); }
+.chip.danger { background:var(--danger-bg); color:var(--danger-tx); }
+.chip.accent2 { background:var(--accent2-bg); color:var(--accent2-tx); }
+.chip.pro { background:var(--pro-bg); color:var(--pro-tx); }
+.chip.neutral { background:var(--line-soft); color:var(--ink-soft); }
+button.btn { background:var(--accent); color:#fff; border:none; padding:8px 14px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; }
+button.btn:hover { background:var(--accent-dark); }
+button.btn.secondary { background:var(--surface); color:var(--ink); border:1px solid var(--line); }
+button.btn:disabled, button.btn:disabled:hover { opacity:.4; cursor:not-allowed; background:var(--accent); }
+button.btn.secondary:disabled, button.btn.secondary:disabled:hover { background:var(--surface); }
+button.link { background:none; border:none; color:var(--accent-dark); cursor:pointer; font-size:12px; padding:2px 4px; }
+textarea { width:100%; font-family: Consolas, monospace; font-size:12px; padding:10px; border:1px solid var(--line); border-radius:8px; }
+input, select { font-size:12.5px; padding:5px 7px; border:1px solid var(--line); border-radius:6px; width:100%; }
+.stat { display:flex; gap:24px; margin-bottom:14px; flex-wrap:wrap; }
+.stat div b { display:block; font-size:20px; }
+.stat div span { font-size:11px; color:var(--ink-soft); }
+.bar { display:flex; width:100%; height:8px; border-radius:4px; overflow:hidden; background:var(--line-soft); margin:8px 0; }
+.muted { color: var(--ink-soft); font-size:12px; }
+.result-card { border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px; }
+.row-between { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap; }
+.form-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:10px 14px; }
+.form-grid label { font-size:11px; color:var(--ink-soft); display:block; margin-bottom:3px; }
+.form-grid .field.readonly input { background:var(--line-soft); color:var(--ink-soft); }
+.toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;}
+
+.import-result { position:relative; margin-top:10px; padding:10px 34px 10px 12px; border:1px solid var(--line); border-radius:6px; background:var(--surface); font-size:13px; line-height:1.6; }
+.import-result .close-x { position:absolute; top:4px; right:8px; border:none; background:none; font-size:18px; cursor:pointer; color:var(--ink-soft); }
+.import-result .warn-line { background:var(--warning-bg); color:var(--warning-tx); padding:4px 8px; border-radius:4px; margin:4px 0; }
+.import-result details { margin-top:4px; }
+
+/* 金額顏色：欠繳紅字、預繳藍字 */
+.amt-owed { color: var(--danger-tx); font-weight: 600; }
+.amt-prepaid { color: var(--pro-tx); font-weight: 600; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* 示範版標示、開帳檢查清單 */
+.edition-chip { background:#E9C46A; color:#3B2A1E; font-size:11px; vertical-align:3px; margin-left:6px; }
+.setup-card { border-color: var(--accent); }
+.setup-list { margin:10px 0 0; padding-left:1.4em; display:flex; flex-direction:column; gap:6px; font-size:13px; }
+.setup-list li { padding-left:4px; }
+.setup-list li.done { color: var(--ink-soft); }
+.setup-list li.done .step-label { text-decoration: line-through; }
+.setup-list .step-state { font-size:11px; font-weight:600; margin-left:6px; }
+.setup-list .step-state.ok { color: var(--success-tx); }
+.setup-list .step-state.todo { color: var(--danger-tx); }
+.setup-list button.link { font-size:12px; }
+.cell-sub { display:block; font-size:11px; color: var(--ink-soft); }
+
+.period-lag { border-color: var(--warning-tx); background: var(--warning-bg); color: var(--warning-tx); font-size: 13px; }
+
+/* 復原匯入 */
+.undo-line { margin: 8px 0; padding: 8px 12px; border: 1px dashed var(--line); border-radius: 6px; font-size: 12.5px; color: var(--ink-soft); display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.undo-line button.btn { padding: 4px 10px; font-size: 12px; }
+
+/* 授權 */
+.license-banner { font-size: 13px; line-height: 1.6; }
+.license-banner.expired { border-color: var(--danger-tx); background: var(--danger-bg); color: var(--danger-tx); }
+.license-banner.notice { border-color: var(--warning-tx); background: var(--warning-bg); color: var(--warning-tx); }
+.license-banner button.link { color: inherit; text-decoration: underline; font-size: 13px; }
+.gate-logo { display:block; width:150px; margin:4px auto 16px; border-radius:12px; }
+.machine-code-box { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 12px; border:1px dashed var(--line); border-radius:8px; background:var(--line-soft); }
+.machine-code { font-family: Consolas, monospace; font-size: 18px; letter-spacing: 1px; }
+
+/* 未繳、預繳名單：月份往右排開 */
+.num-col { text-align: right; font-variant-numeric: tabular-nums; }
+th.num-col { text-align: right; }
+tr.total-row td { border-top: 2px solid var(--line); background: var(--line-soft); position: sticky; bottom: 0; }
+
+.warn-banner { margin: 10px 0; padding: 8px 12px; border-radius: 6px; background: var(--danger-bg); color: var(--danger-tx); font-size: 13px; }
+.warn-banner button.link { color: var(--danger-tx); text-decoration: underline; }
+
+/* ---------- 線上版 ---------- */
+.header-row { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+.header-user { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:12.5px; color:var(--header-ink-soft); }
+.header-user select { width:auto; max-width:280px; background:var(--surface); }
+.header-link { background:none; border:1px solid var(--header-ink-soft); color:var(--header-ink); border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer; text-decoration:none; }
+.header-link:hover { background:rgba(255,255,255,.08); }
+.demo-samples { font-size:12px; color:var(--header-ink); }
+.demo-samples summary { cursor:pointer; padding:2px 10px; border:1px solid var(--header-ink-soft); border-radius:6px; display:inline-block; }
+.demo-samples-list { display:flex; flex-direction:column; align-items:flex-start; background:var(--surface); border-radius:8px; padding:6px 8px; margin-top:6px; }
+.login-card { max-width:400px; margin:60px auto; }
+.login-card form { display:flex; flex-direction:column; gap:6px; }
+.login-card form button { margin-top:10px; padding:10px; font-size:14px; }
+.login-card input { font-size:15px; padding:8px 10px; }
+.admin-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.check-list { display:flex; flex-wrap:wrap; gap:6px 16px; font-size:13px; }
+.check-list label.check { display:flex; align-items:center; gap:4px; }
+.check-list input { width:auto; }
+tr.row-inactive td { color:var(--ink-soft); background:var(--line-soft); }
+a { color: var(--accent-dark); }
+
+/* 手機、平板：物業公司主管常用手機看 */
+@media (max-width: 760px) {
+  header { padding: 14px 16px 12px; }
+  nav { padding: 8px 16px 0; overflow-x:auto; flex-wrap:nowrap; }
+  nav button { white-space:nowrap; padding:10px 10px; }
+  main { padding: 14px 16px 48px; }
+  .form-grid, .admin-grid { grid-template-columns: 1fr 1fr !important; }
+  .scroll { max-height: 70vh; }
+  .header-user select { max-width: 100%; }
+}
+@media (max-width: 480px) {
+  .form-grid, .admin-grid { grid-template-columns: 1fr !important; }
+  .login-card { margin: 24px 16px; }
+}
