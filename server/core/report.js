@@ -43,18 +43,18 @@ function buildIncomeSheet(period, rows) {
   const label = rocPeriodLabel(period);
   const aoa = [];
   aoa.push([`${COMMUNITY} ${label} 管理費收入明細${RANGE}`]);
-  aoa.push(['入帳日期', '內容摘要', '住戶名稱', '入帳方式', '繳款月份/期別', '前期補繳', '本期管理費', '預繳', '合計']);
+  aoa.push(['序號', '入帳日期', '內容摘要', '住戶名稱', '入帳方式', '繳款月份/期別', '前期補繳', '本期管理費', '預繳', '合計']);
 
   let sumPrior = 0, sumCurrent = 0, sumPrepay = 0, sumTotal = 0;
-  rows.forEach(r => {
+  rows.forEach((r, idx) => {
     aoa.push([
-      rocDateLabel(r.date), '管理費收入', r.unit, 'ATM',
+      idx + 1, rocDateLabel(r.date), '管理費收入', r.unit, 'ATM',
       r.periodRange ? rocPeriodRangeLabel(r.periodRange) : '',
       r.prior || '', r.current || '', r.prepay || '', r.total,
     ]);
     sumPrior += r.prior || 0; sumCurrent += r.current || 0; sumPrepay += r.prepay || 0; sumTotal += r.total || 0;
   });
-  aoa.push(['收入合計', '', '', '', '', sumPrior, sumCurrent, sumPrepay, sumTotal]);
+  aoa.push([`共 ${rows.length} 筆`, '收入合計', '', '', '', '', sumPrior, sumCurrent, sumPrepay, sumTotal]);
   return XLSX.utils.aoa_to_sheet(aoa);
 }
 
@@ -72,7 +72,7 @@ function buildUnpaidSheet(period, rows) {
   const periods = Array.from(new Set(rows.map(r => r.period))).sort();
   const aoa = [];
   aoa.push([`${COMMUNITY} 管理費未繳明細（截至 ${label}）`]);
-  aoa.push(['戶號', '每月應繳管理費', ...periods.map(p => rocMonthHeader(p)), '未繳合計', '備註']);
+  aoa.push(['序號', '戶號', '每月應繳管理費', ...periods.map(p => rocMonthHeader(p)), '未繳合計', '備註']);
 
   const byUnit = new Map();
   rows.forEach(r => {
@@ -87,7 +87,7 @@ function buildUnpaidSheet(period, rows) {
   let grand = 0;
   Array.from(byUnit.values())
     .sort((a, b) => a.unit.localeCompare(b.unit))
-    .forEach(h => {
+    .forEach((h, idx) => {
       let rowTotal = 0;
       const cells = periods.map((p, i) => {
         const v = h.byPeriod[p] || 0;
@@ -96,9 +96,9 @@ function buildUnpaidSheet(period, rows) {
         return v || '';
       });
       grand += rowTotal;
-      aoa.push([h.unit, h.due, ...cells, rowTotal, Array.from(h.notes).join('；')]);
+      aoa.push([idx + 1, h.unit, h.due, ...cells, rowTotal, Array.from(h.notes).join('；')]);
     });
-  aoa.push(['合計未繳', '', ...totals, grand, '']);
+  aoa.push([`共 ${byUnit.size} 戶`, '合計未繳', '', ...totals, grand, '']);
   return XLSX.utils.aoa_to_sheet(aoa);
 }
 
@@ -107,7 +107,7 @@ function buildPrepaidSheet(period, rows) {
   const periods = Array.from(new Set(rows.map(r => r.period))).sort();
   const aoa = [];
   aoa.push([`${COMMUNITY} 管理費預繳明細（本期 ${label}）`]);
-  aoa.push(['戶號', '每月應繳', ...periods.map(p => rocMonthHeader(p)), '合計', '備註']);
+  aoa.push(['序號', '戶號', '每月應繳', ...periods.map(p => rocMonthHeader(p)), '合計', '備註']);
 
   const byUnit = new Map();
   rows.forEach(r => {
@@ -122,7 +122,7 @@ function buildPrepaidSheet(period, rows) {
   let grand = 0;
   Array.from(byUnit.values())
     .sort((a, b) => a.unit.localeCompare(b.unit))
-    .forEach(h => {
+    .forEach((h, idx) => {
       let rowTotal = 0;
       const cells = periods.map((p, i) => {
         const v = h.byPeriod[p] || 0;
@@ -131,9 +131,9 @@ function buildPrepaidSheet(period, rows) {
         return v || '';
       });
       grand += rowTotal;
-      aoa.push([h.unit, h.due, ...cells, rowTotal, Array.from(h.notes).join('；')]);
+      aoa.push([idx + 1, h.unit, h.due, ...cells, rowTotal, Array.from(h.notes).join('；')]);
     });
-  aoa.push(['合計預繳', '', ...totals, grand, '']);
+  aoa.push([`共 ${byUnit.size} 戶`, '合計預繳', '', ...totals, grand, '']);
   return XLSX.utils.aoa_to_sheet(aoa);
 }
 

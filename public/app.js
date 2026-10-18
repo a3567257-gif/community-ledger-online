@@ -473,18 +473,36 @@ function renderChanges(changes){
   // 唯讀模式一律鎖住，不會因為每次重新整理清單而被誤開回可以按。
   btn.disabled = window.__isReadOnly ? true : false;
   btn.textContent = '確認無誤，產生本期應收帳款';
+  const changed = changes.filter(c=>!c.noPrior);
+  const noPrior = changes.filter(c=>c.noPrior);
   if (!changes.length){
     el.innerHTML = '<p class="muted">目前登記資料跟上期完全一致，沒有需要特別核對的住戶。</p>';
     return;
   }
-  el.innerHTML = `<p style="font-weight:600; color:var(--warning-tx); margin-bottom:8px;">${changes.length} 戶本期試算金額跟上期不同，請核對：</p>` +
-    changes.map(c=>`
-      <div class="row-between" style="padding:8px 0; border-top:1px solid var(--line);">
-        <div><b>${escHtml(c.unit)}</b> <span class="muted">${escHtml(c.account)}</span></div>
-        <div class="muted">上期 $${c.lastDue===null?'（無資料）':fmt(c.lastDue)} → 本期試算 $${fmt(c.estimatedTotal)}
-          <span class="chip ${c.delta>0?'warning':'danger'}">${c.delta>0?'+':''}${fmt(c.delta)}</span>
-        </div>
-      </div>`).join('');
+  let html = '';
+  if (changed.length){
+    html += `<p style="font-weight:600; color:var(--warning-tx); margin-bottom:8px;">${changed.length} 戶本期試算金額跟上期不同，請核對：</p>` +
+      changed.map((c,idx)=>`
+        <div class="row-between" style="padding:8px 0; border-top:1px solid var(--line);">
+          <div><span class="muted">${idx+1}.</span> <b>${escHtml(c.unit)}</b> <span class="muted">${escHtml(c.account)}</span></div>
+          <div class="muted">上期（${rocP(c.lastPeriod)}）$${fmt(c.lastDue)} → 本期試算 $${fmt(c.estimatedTotal)}
+            <span class="chip ${c.delta>0?'warning':'danger'}">${c.delta>0?'+':''}${fmt(c.delta)}</span>
+          </div>
+        </div>`).join('');
+  } else if (noPrior.length < households.length) {
+    html += '<p class="muted">有上期帳款的住戶，本期試算金額都跟上期相同。</p>';
+  }
+  // 第一次使用系統時，系統裡還沒有上期的月費帳款可以比對（期初未繳名單登記的是欠款，不是月費），這是正常的
+  if (noPrior.length){
+    html += `<details class="no-prior" ${changed.length ? '' : 'open'}>
+      <summary>${noPrior.length} 戶是第一次產生帳款，沒有上期月費可以比對（第一次使用系統的正常情況）：請確認本期試算金額跟社區原本收的管理費一樣</summary>
+      <div class="scroll" style="margin-top:8px;"><table>
+        <thead><tr><th class="num-col">序號</th><th>戶號</th><th>帳號</th><th class="num-col">本期試算</th></tr></thead>
+        <tbody>${noPrior.map((c,idx)=>`<tr><td class="num-col muted">${idx+1}</td><td>${escHtml(c.unit)}</td><td>${escHtml(c.account)}</td><td class="num-col">$${fmt(c.estimatedTotal)}</td></tr>`).join('')}</tbody>
+      </table></div>
+    </details>`;
+  }
+  el.innerHTML = html;
 }
 
 document.getElementById('btn-generate').addEventListener('click', async ()=>{
@@ -525,14 +543,14 @@ async function refreshUnpaid(){
   document.getElementById('btn-clear-unpaid').hidden = window.__isReadOnly || periodInfo.generated || !rows.some(r=>r.note==='未繳名單匯入');
   const { months, list } = pivotByHousehold(rows);
   document.getElementById('unpaid-head').innerHTML =
-    `<tr><th>戶號</th>${months.map(m=>`<th class="num-col">${rocP(m)}</th>`).join('')}<th class="num-col">未繳合計</th><th>備註</th></tr>`;
+    `<tr><th class="num-col">序號</th><th>戶號</th>${months.map(m=>`<th class="num-col">${rocP(m)}</th>`).join('')}<th class="num-col">未繳合計</th><th>備註</th></tr>`;
   if (!list.length){
-    document.getElementById('unpaid-rows').innerHTML = `<tr><td colspan="${months.length+3}" class="muted">目前沒有未繳資料。</td></tr>`;
+    document.getElementById('unpaid-rows').innerHTML = `<tr><td colspan="${months.length+4}" class="muted">目前沒有未繳資料。</td></tr>`;
     return;
   }
   const colTotals = months.map(()=>0);
   let grand = 0;
-  const body = list.map(h=>{
+  const body = list.map((h,idx)=>{
     let sum = 0;
     const cells = months.map((m,i)=>{
       const r = h.cells[m];
@@ -542,9 +560,9 @@ async function refreshUnpaid(){
       return `<td class="num-col amt-owed">$${fmt(r.amountOwed)}${partial}</td>`;
     }).join('');
     grand += sum;
-    return `<tr><td>${escHtml(h.unit)}</td>${cells}<td class="num-col amt-owed"><b>$${fmt(sum)}</b></td><td class="muted">${escHtml([...h.notes].filter(n=>n!=='未繳名單匯入').join('、'))}</td></tr>`;
+    return `<tr><td class="num-col muted">${idx+1}</td><td>${escHtml(h.unit)}</td>${cells}<td class="num-col amt-owed"><b>$${fmt(sum)}</b></td><td class="muted">${escHtml([...h.notes].filter(n=>n!=='未繳名單匯入').join('、'))}</td></tr>`;
   }).join('');
-  const totalRow = `<tr class="total-row"><td><b>合計（${list.length} 戶）</b></td>${colTotals.map(t=>`<td class="num-col amt-owed"><b>${t?'$'+fmt(t):''}</b></td>`).join('')}<td class="num-col amt-owed"><b>$${fmt(grand)}</b></td><td></td></tr>`;
+  const totalRow = `<tr class="total-row"><td colspan="2"><b>合計（${list.length} 戶）</b></td>${colTotals.map(t=>`<td class="num-col amt-owed"><b>${t?'$'+fmt(t):''}</b></td>`).join('')}<td class="num-col amt-owed"><b>$${fmt(grand)}</b></td><td></td></tr>`;
   document.getElementById('unpaid-rows').innerHTML = body + totalRow;
 }
 
@@ -592,14 +610,14 @@ async function refreshPrepaid(){
   const hasCurrent = opening.length > 0;
   const headCur = hasCurrent ? `<th class="num-col" title="系統啟用前就已經繳了本期，不算預繳">${rocP(cp)}<span class="cell-sub">本期已繳（期初）</span></th>` : '';
   document.getElementById('prepaid-head').innerHTML =
-    `<tr><th>戶號</th>${headCur}${futureMonths.map(m=>`<th class="num-col">${rocP(m)}</th>`).join('')}<th class="num-col">預繳合計</th><th>備註</th></tr>`;
+    `<tr><th class="num-col">序號</th><th>戶號</th>${headCur}${futureMonths.map(m=>`<th class="num-col">${rocP(m)}</th>`).join('')}<th class="num-col">預繳合計</th><th>備註</th></tr>`;
   if (!list.length){
-    document.getElementById('prepaid-rows').innerHTML = `<tr><td colspan="${futureMonths.length+3+(hasCurrent?1:0)}" class="muted">目前沒有預繳資料。</td></tr>`;
+    document.getElementById('prepaid-rows').innerHTML = `<tr><td colspan="${futureMonths.length+4+(hasCurrent?1:0)}" class="muted">目前沒有預繳資料。</td></tr>`;
     return;
   }
   const colTotals = futureMonths.map(()=>0);
   let grand = 0, curTotal = 0;
-  const body = list.map(h=>{
+  const body = list.map((h,idx)=>{
     let sum = 0;
     let curCell = '';
     if (hasCurrent){
@@ -614,9 +632,9 @@ async function refreshPrepaid(){
       return `<td class="num-col amt-prepaid">$${fmt(r.amountPaid)}${partial}</td>`;
     }).join('');
     grand += sum;
-    return `<tr><td>${escHtml(h.unit)}</td>${curCell}${cells}<td class="num-col amt-prepaid"><b>${sum?'$'+fmt(sum):''}</b></td><td class="muted">${escHtml([...h.notes].filter(n=>n!=='預繳名單匯入'&&n!=='本期已繳').join('、'))}</td></tr>`;
+    return `<tr><td class="num-col muted">${idx+1}</td><td>${escHtml(h.unit)}</td>${curCell}${cells}<td class="num-col amt-prepaid"><b>${sum?'$'+fmt(sum):''}</b></td><td class="muted">${escHtml([...h.notes].filter(n=>n!=='預繳名單匯入'&&n!=='本期已繳').join('、'))}</td></tr>`;
   }).join('');
-  const totalRow = `<tr class="total-row"><td><b>合計（${list.length} 戶）</b></td>${hasCurrent?`<td class="num-col muted"><b>$${fmt(curTotal)}</b></td>`:''}${colTotals.map(t=>`<td class="num-col amt-prepaid"><b>${t?'$'+fmt(t):''}</b></td>`).join('')}<td class="num-col amt-prepaid"><b>$${fmt(grand)}</b></td><td></td></tr>`;
+  const totalRow = `<tr class="total-row"><td colspan="2"><b>合計（${list.length} 戶）</b></td>${hasCurrent?`<td class="num-col muted"><b>$${fmt(curTotal)}</b></td>`:''}${colTotals.map(t=>`<td class="num-col amt-prepaid"><b>${t?'$'+fmt(t):''}</b></td>`).join('')}<td class="num-col amt-prepaid"><b>$${fmt(grand)}</b></td><td></td></tr>`;
   document.getElementById('prepaid-rows').innerHTML = body + totalRow;
 }
 
@@ -689,12 +707,19 @@ async function refreshIncome(){
   await refreshBankImports();
   const res = await window.api.getIncomeDetail();
   const rows = res.ok ? res.rows : [];
-  document.getElementById('income-rows').innerHTML = rows.map(r=>`
+  const sum = k => rows.reduce((t, r)=> t + (r[k] || 0), 0);
+  const households = new Set(rows.map(r=>r.unit)).size;
+  document.getElementById('income-rows').innerHTML = rows.length ? rows.map((r,idx)=>`
     <tr>
+      <td class="num-col muted">${idx+1}</td>
       <td>${rocD(r.date)}</td><td>${escHtml(r.unit || '')}</td><td>${escHtml(r.account || '')}</td><td>${rocRange(r.periodRange)}</td>
       <td>${r.prior?('$'+fmt(r.prior)):''}</td><td>${r.current?('$'+fmt(r.current)):''}</td>
       <td>${r.prepay?('$'+fmt(r.prepay)):''}</td><td><b>$${fmt(r.total)}</b></td>
-    </tr>`).join('') || `<tr><td colspan="8" class="muted">本期還沒有比對成功的入帳紀錄。</td></tr>`;
+    </tr>`).join('') + `
+    <tr class="total-row">
+      <td colspan="5"><b>合計（${rows.length} 筆入帳，${households} 戶）</b></td>
+      <td><b>$${fmt(sum('prior'))}</b></td><td><b>$${fmt(sum('current'))}</b></td><td><b>$${fmt(sum('prepay'))}</b></td><td><b>$${fmt(sum('total'))}</b></td>
+    </tr>` : `<tr><td colspan="9" class="muted">本期還沒有比對成功的入帳紀錄。</td></tr>`;
 }
 
 document.getElementById('btn-export-report').addEventListener('click', async ()=>{

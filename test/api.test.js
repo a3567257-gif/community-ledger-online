@@ -111,6 +111,10 @@ test('登入、權限隔離、授權唯讀、完整記帳流程', async () => {
   assert.ok(unpaid.createdCount > 0);
   const prepaid = await boss.upload(`/api/c/${demoId}/upload/prepaid:importFile`, DEMO('demo3_prepaid.xlsx'));
   assert.strictEqual(prepaid.ok, true, prepaid.error);
+  // 本期試算與核對：第一次使用時沒有上期月費，期初未繳名單的欠款不能當成上期月費來比
+  const changes = await rpc(boss, demoId, 'ledger:changes');
+  assert.strictEqual(changes.filter(c => !c.noPrior).length, 0);
+  assert.ok(changes.find(c => c.unit === '103-7F').noPrior);
   const gen = await rpc(boss, demoId, 'ledger:generatePeriod');
   assert.strictEqual(gen.ok, true, gen.error);
   assert.strictEqual(gen.created, 34);
@@ -131,7 +135,18 @@ test('登入、權限隔離、授權唯讀、完整記帳流程', async () => {
   const rep = await boss.get(`/api/c/${demoId}/download/report`);
   assert.strictEqual(rep.status, 200);
   assert.match(rep.headers.get('content-disposition'), /filename\*=UTF-8''/);
-  assert.ok((await rep.arrayBuffer()).byteLength > 1000);
+  // 月結報表加了序號欄，匯出的未繳名單仍然可以直接當匯入檔
+  const XLSX = require('xlsx');
+  const wb = XLSX.read(Buffer.from(await rep.arrayBuffer()), { type: 'buffer' });
+  const unpaidSheet = XLSX.utils.sheet_to_json(wb.Sheets['未繳名單'], { header: 1 });
+  assert.deepStrictEqual(unpaidSheet[1].slice(0, 2), ['序號', '戶號']);
+  assert.strictEqual(unpaidSheet[2][0], 1);
+  const { readWithHeaderDetect, hasUnitColumn } = require('../server/core/excel-read.js');
+  const onlyUnpaid = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(onlyUnpaid, wb.Sheets['未繳名單'], '未繳名單');
+  const reread = readWithHeaderDetect(XLSX.write(onlyUnpaid, { type: 'buffer', bookType: 'xlsx' }), 'r.xlsx', hasUnitColumn);
+  assert.strictEqual(reread.headerRow, 2);
+
   assert.strictEqual((await boss.get(`/api/c/${demoId}/download/template/bank`)).status, 200);
   assert.strictEqual((await boss.get(`/api/c/${demoId}/download/demo/4`)).status, 200);
   assert.strictEqual((await staff.get(`/api/c/${a1}/download/demo/4`)).status, 404, '正式社區沒有示範檔');

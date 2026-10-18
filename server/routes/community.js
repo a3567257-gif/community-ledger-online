@@ -60,6 +60,23 @@ async function assertWritable(req, channel) {
 const isDemo = req => req.community.edition === 'demo';
 const cur = s => s.getCurrentPeriod();
 
+// 本期試算與核對畫面用：跟離線版 monthlyChanges 一樣，列出試算月費跟上期不同的住戶，差別是
+// 「上期」只拿真正的月費帳款來比，不拿期初未繳名單登記的欠款（那是「還欠多少」，不是月費），
+// 而且沒有上期帳款的住戶（第一次使用系統）另外標記 noPrior，畫面上收成一行說明，不跟真正有變動的混在一起。
+// 只影響畫面顯示，帳款計算不變。
+function changesForReview(s) {
+  const period = cur(s);
+  return s.monthlyPreview()
+    .map(p => {
+      const latest = s.ledgerRowsForHousehold(p.householdId)
+        .filter(r => r.period < period && r.note !== '未繳名單匯入')
+        .sort((a, b) => b.period.localeCompare(a.period))[0] || null;
+      if (!latest) return { ...p, lastPeriod: null, lastDue: null, delta: null, noPrior: true };
+      return { ...p, lastPeriod: latest.period, lastDue: latest.due, delta: p.estimatedTotal - latest.due, noPrior: false };
+    })
+    .filter(x => x.noPrior || x.delta !== 0);
+}
+
 // ---------- 一般動作 ----------
 // read: 只讀；write: 會改資料（action 是寫進操作紀錄的名稱）
 const RPC = {
@@ -68,7 +85,7 @@ const RPC = {
   'rates:get': { read: s => s.getRateSettings() },
   'rates:save': { write: (s, a) => ({ ok: true, rates: s.saveRateSettings({ ...a, effectiveFrom: cur(s) }) }), action: '儲存費率設定' },
   'rates:history': { read: s => ({ ok: true, versions: s.listRateVersions() }) },
-  'ledger:changes': { read: s => s.monthlyChanges(cur(s)) },
+  'ledger:changes': { read: s => changesForReview(s) },
   'ledger:generatePeriod': { write: s => ({ ok: true, ...s.generatePeriod(cur(s)), period: cur(s) }), action: '產生本期應收帳款', detail: r => ({ period: r.period, created: r.created }) },
   'ledger:periodStatus': { read: s => ({ period: cur(s), generated: s.periodAlreadyGenerated(cur(s)) }) },
   'bank:imports': { read: s => ({ ok: true, imports: s.listBankImports() }) },
