@@ -183,27 +183,29 @@ async function refreshReceivables(){
   const res = await window.api.getReceivables();
   const title = document.getElementById('receivables-title');
   const body = document.getElementById('receivables-rows');
-  if (!res.ok){ body.innerHTML = `<tr><td colspan="12" class="muted">${escHtml(res.error||'讀取失敗')}</td></tr>`; return; }
+  if (!res.ok){ body.innerHTML = `<tr><td colspan="13" class="muted">${escHtml(res.error||'讀取失敗')}</td></tr>`; return; }
   const t = res.totals;
   const counts = res.rows.reduce((m, r)=>{ m[r.status] = (m[r.status]||0) + 1; return m; }, {});
   title.innerHTML = res.generated
     ? `<b>本期（${rocP(res.period)}）應收帳款明細</b><span class="muted">　共 ${res.rows.length} 戶，應收 $${fmt(t.due)}、已收 $${fmt(t.paid)}、未收 $${fmt(t.owed)}`
       + `（${Object.entries(counts).map(([k,v])=>`${k} ${v} 戶`).join('、')}）</span>`
-    : `<b>本期（${rocP(res.period)}）應收帳款試算</b><span class="muted">　帳款還沒產生，以下是依目前住戶資料與費率試算的金額，共 ${res.rows.length} 戶，應收 $${fmt(t.due)}。</span>`;
+    : `<span class="chip trial-chip">試算・尚未產生</span> <b>本期（${rocP(res.period)}）應收帳款試算</b><span class="muted">　帳款還沒產生，以下只是依目前住戶資料與費率先算給您核對的金額（共 ${res.rows.length} 戶，應收 $${fmt(t.due)}）。核對無誤後按上方「確認無誤，產生本期應收帳款」才會正式建立帳款。</span>`;
+  // 帳款還沒產生時：表格換成淺色底，已收、未收、狀態這三欄還沒有意義，先隱藏
+  document.getElementById('receivables-table').classList.toggle('trial', !res.generated);
   const money = v => v ? `$${fmt(v)}` : '<span class="muted">-</span>';
-  body.innerHTML = res.rows.map(r=>`
+  body.innerHTML = res.rows.map((r,idx)=>`
     <tr>
-      <td>${escHtml(r.unit)}</td><td>${escHtml(r.category||'')}</td><td class="num-col">${r.area}</td>
+      <td class="seq-col">${idx+1}</td><td>${escHtml(r.unit)}</td><td>${escHtml(r.category||'')}</td><td class="num-col">${r.area}</td>
       <td class="num-col">${money(r.base)}</td><td class="num-col">${money(r.publicFund)}</td><td class="num-col">${money(r.buildingFund)}</td><td class="num-col">${money(r.parking)}</td>
       <td class="num-col"><b>$${fmt(r.due)}</b>${r.hasLedger && r.due !== r.estimated ? `<span class="cell-sub">試算 $${fmt(r.estimated)}</span>` : ''}</td>
-      <td class="num-col">${money(r.paid)}</td><td class="num-col ${r.owed ? 'amt-owed' : ''}">${money(r.owed)}</td>
-      <td><span class="chip ${STATUS_CHIP[r.status]||'neutral'}">${r.status}</span></td>
+      <td class="num-col col-paid">${money(r.paid)}</td><td class="num-col col-paid ${r.owed ? 'amt-owed' : ''}">${money(r.owed)}</td>
+      <td class="col-paid"><span class="chip ${STATUS_CHIP[r.status]||'neutral'}">${r.status}</span></td>
       <td class="muted">${escHtml(r.note||'')}</td>
     </tr>`).join('') + `
     <tr class="total-row">
-      <td colspan="3"><b>合計（${res.rows.length} 戶）</b></td>
+      <td colspan="4"><b>合計（${res.rows.length} 戶）</b></td>
       <td class="num-col">$${fmt(t.base)}</td><td class="num-col">$${fmt(t.publicFund)}</td><td class="num-col">$${fmt(t.buildingFund)}</td><td class="num-col">$${fmt(t.parking)}</td>
-      <td class="num-col"><b>$${fmt(t.due)}</b></td><td class="num-col">$${fmt(t.paid)}</td><td class="num-col amt-owed">$${fmt(t.owed)}</td><td></td><td></td>
+      <td class="num-col"><b>$${fmt(t.due)}</b></td><td class="num-col col-paid">$${fmt(t.paid)}</td><td class="num-col col-paid amt-owed">$${fmt(t.owed)}</td><td class="col-paid"></td><td></td>
     </tr>`;
 }
 
@@ -497,8 +499,8 @@ function renderChanges(changes){
     html += `<details class="no-prior" ${changed.length ? '' : 'open'}>
       <summary>${noPrior.length} 戶是第一次產生帳款，沒有上期月費可以比對（第一次使用系統的正常情況）：請確認本期試算金額跟社區原本收的管理費一樣</summary>
       <div class="scroll" style="margin-top:8px;"><table>
-        <thead><tr><th class="num-col">序號</th><th>戶號</th><th>帳號</th><th class="num-col">本期試算</th></tr></thead>
-        <tbody>${noPrior.map((c,idx)=>`<tr><td class="num-col muted">${idx+1}</td><td>${escHtml(c.unit)}</td><td>${escHtml(c.account)}</td><td class="num-col">$${fmt(c.estimatedTotal)}</td></tr>`).join('')}</tbody>
+        <thead><tr><th class="seq-col">序號</th><th>戶號</th><th>帳號</th><th class="num-col">本期試算</th></tr></thead>
+        <tbody>${noPrior.map((c,idx)=>`<tr><td class="seq-col">${idx+1}</td><td>${escHtml(c.unit)}</td><td>${escHtml(c.account)}</td><td class="num-col">$${fmt(c.estimatedTotal)}</td></tr>`).join('')}</tbody>
       </table></div>
     </details>`;
   }
@@ -543,7 +545,7 @@ async function refreshUnpaid(){
   document.getElementById('btn-clear-unpaid').hidden = window.__isReadOnly || periodInfo.generated || !rows.some(r=>r.note==='未繳名單匯入');
   const { months, list } = pivotByHousehold(rows);
   document.getElementById('unpaid-head').innerHTML =
-    `<tr><th class="num-col">序號</th><th>戶號</th>${months.map(m=>`<th class="num-col">${rocP(m)}</th>`).join('')}<th class="num-col">未繳合計</th><th>備註</th></tr>`;
+    `<tr><th class="seq-col">序號</th><th>戶號</th>${months.map(m=>`<th class="num-col">${rocP(m)}</th>`).join('')}<th class="num-col">未繳合計</th><th>備註</th></tr>`;
   if (!list.length){
     document.getElementById('unpaid-rows').innerHTML = `<tr><td colspan="${months.length+4}" class="muted">目前沒有未繳資料。</td></tr>`;
     return;
@@ -560,7 +562,7 @@ async function refreshUnpaid(){
       return `<td class="num-col amt-owed">$${fmt(r.amountOwed)}${partial}</td>`;
     }).join('');
     grand += sum;
-    return `<tr><td class="num-col muted">${idx+1}</td><td>${escHtml(h.unit)}</td>${cells}<td class="num-col amt-owed"><b>$${fmt(sum)}</b></td><td class="muted">${escHtml([...h.notes].filter(n=>n!=='未繳名單匯入').join('、'))}</td></tr>`;
+    return `<tr><td class="seq-col">${idx+1}</td><td>${escHtml(h.unit)}</td>${cells}<td class="num-col amt-owed"><b>$${fmt(sum)}</b></td><td class="muted">${escHtml([...h.notes].filter(n=>n!=='未繳名單匯入').join('、'))}</td></tr>`;
   }).join('');
   const totalRow = `<tr class="total-row"><td colspan="2"><b>合計（${list.length} 戶）</b></td>${colTotals.map(t=>`<td class="num-col amt-owed"><b>${t?'$'+fmt(t):''}</b></td>`).join('')}<td class="num-col amt-owed"><b>$${fmt(grand)}</b></td><td></td></tr>`;
   document.getElementById('unpaid-rows').innerHTML = body + totalRow;
@@ -610,7 +612,7 @@ async function refreshPrepaid(){
   const hasCurrent = opening.length > 0;
   const headCur = hasCurrent ? `<th class="num-col" title="系統啟用前就已經繳了本期，不算預繳">${rocP(cp)}<span class="cell-sub">本期已繳（期初）</span></th>` : '';
   document.getElementById('prepaid-head').innerHTML =
-    `<tr><th class="num-col">序號</th><th>戶號</th>${headCur}${futureMonths.map(m=>`<th class="num-col">${rocP(m)}</th>`).join('')}<th class="num-col">預繳合計</th><th>備註</th></tr>`;
+    `<tr><th class="seq-col">序號</th><th>戶號</th>${headCur}${futureMonths.map(m=>`<th class="num-col">${rocP(m)}</th>`).join('')}<th class="num-col">預繳合計</th><th>備註</th></tr>`;
   if (!list.length){
     document.getElementById('prepaid-rows').innerHTML = `<tr><td colspan="${futureMonths.length+4+(hasCurrent?1:0)}" class="muted">目前沒有預繳資料。</td></tr>`;
     return;
@@ -632,7 +634,7 @@ async function refreshPrepaid(){
       return `<td class="num-col amt-prepaid">$${fmt(r.amountPaid)}${partial}</td>`;
     }).join('');
     grand += sum;
-    return `<tr><td class="num-col muted">${idx+1}</td><td>${escHtml(h.unit)}</td>${curCell}${cells}<td class="num-col amt-prepaid"><b>${sum?'$'+fmt(sum):''}</b></td><td class="muted">${escHtml([...h.notes].filter(n=>n!=='預繳名單匯入'&&n!=='本期已繳').join('、'))}</td></tr>`;
+    return `<tr><td class="seq-col">${idx+1}</td><td>${escHtml(h.unit)}</td>${curCell}${cells}<td class="num-col amt-prepaid"><b>${sum?'$'+fmt(sum):''}</b></td><td class="muted">${escHtml([...h.notes].filter(n=>n!=='預繳名單匯入'&&n!=='本期已繳').join('、'))}</td></tr>`;
   }).join('');
   const totalRow = `<tr class="total-row"><td colspan="2"><b>合計（${list.length} 戶）</b></td>${hasCurrent?`<td class="num-col muted"><b>$${fmt(curTotal)}</b></td>`:''}${colTotals.map(t=>`<td class="num-col amt-prepaid"><b>${t?'$'+fmt(t):''}</b></td>`).join('')}<td class="num-col amt-prepaid"><b>$${fmt(grand)}</b></td><td></td></tr>`;
   document.getElementById('prepaid-rows').innerHTML = body + totalRow;
@@ -711,7 +713,7 @@ async function refreshIncome(){
   const households = new Set(rows.map(r=>r.unit)).size;
   document.getElementById('income-rows').innerHTML = rows.length ? rows.map((r,idx)=>`
     <tr>
-      <td class="num-col muted">${idx+1}</td>
+      <td class="seq-col">${idx+1}</td>
       <td>${rocD(r.date)}</td><td>${escHtml(r.unit || '')}</td><td>${escHtml(r.account || '')}</td><td>${rocRange(r.periodRange)}</td>
       <td>${r.prior?('$'+fmt(r.prior)):''}</td><td>${r.current?('$'+fmt(r.current)):''}</td>
       <td>${r.prepay?('$'+fmt(r.prepay)):''}</td><td><b>$${fmt(r.total)}</b></td>

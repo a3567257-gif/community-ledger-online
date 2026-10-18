@@ -152,15 +152,17 @@
     </div>
     <div class="card">
       <p style="margin:0 0 10px;" id="receivables-title"></p>
+      <div id="receivables-table">
       <div class="scroll">
         <table>
           <thead><tr>
-            <th>戶號</th><th>類型</th><th class="num-col">坪數</th>
+            <th class="seq-col">序號</th><th>戶號</th><th>類型</th><th class="num-col">坪數</th>
             <th class="num-col">管理費</th><th class="num-col">公共基金</th><th class="num-col">修繕基金</th><th class="num-col">車位費</th>
-            <th class="num-col">本期應收</th><th class="num-col">已收</th><th class="num-col">未收</th><th>狀態</th><th>備註</th>
+            <th class="num-col">本期應收</th><th class="num-col col-paid">已收</th><th class="num-col col-paid">未收</th><th class="col-paid">狀態</th><th>備註</th>
           </tr></thead>
           <tbody id="receivables-rows"></tbody>
         </table>
+      </div>
       </div>
       <p class="muted" style="margin:8px 0 0;">已收：本期銀行明細沖帳、期初已繳或之前預繳到這一期的金額合計。銀行明細匯入後這張表會自動更新。</p>
     </div>
@@ -255,7 +257,7 @@
       <p class="muted" id="report-export-status"></p>
       <div class="scroll">
         <table>
-          <thead><tr><th class="num-col">序號</th><th>入帳日期</th><th>戶號</th><th>帳號</th><th>繳款期別</th><th>前期補繳</th><th>本期管理費</th><th>預繳</th><th>合計</th></tr></thead>
+          <thead><tr><th class="seq-col">序號</th><th>入帳日期</th><th>戶號</th><th>帳號</th><th>繳款期別</th><th>前期補繳</th><th>本期管理費</th><th>預繳</th><th>合計</th></tr></thead>
           <tbody id="income-rows"></tbody>
         </table>
       </div>

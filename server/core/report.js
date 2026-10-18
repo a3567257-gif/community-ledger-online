@@ -39,6 +39,21 @@ function rocDateLabel(iso) {
   return `${Number(y) - 1911}/${m}${d ? '/' + d : ''}`;
 }
 
+// 金額一律顯示千分位（2,523），儲存格仍然是數字，在 Excel 裡可以照常加總；序號欄（第一欄）不加。
+// 同時設定欄寬，欄名不會被截掉。widths 沒列到的欄（月份欄）用 10。
+function finishSheet(aoa, widths) {
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let r = 2; r <= range.e.r; r++) {
+    for (let c = 1; c <= range.e.c; c++) {
+      const cell = ws[XLSX.utils.encode_cell({ r, c })];
+      if (cell && cell.t === 'n') cell.z = '#,##0';
+    }
+  }
+  ws['!cols'] = Array.from({ length: range.e.c + 1 }, (_, i) => ({ wch: widths[i] || 10 }));
+  return ws;
+}
+
 function buildIncomeSheet(period, rows) {
   const label = rocPeriodLabel(period);
   const aoa = [];
@@ -55,7 +70,7 @@ function buildIncomeSheet(period, rows) {
     sumPrior += r.prior || 0; sumCurrent += r.current || 0; sumPrepay += r.prepay || 0; sumTotal += r.total || 0;
   });
   aoa.push([`共 ${rows.length} 筆`, '收入合計', '', '', '', '', sumPrior, sumCurrent, sumPrepay, sumTotal]);
-  return XLSX.utils.aoa_to_sheet(aoa);
+  return finishSheet(aoa, [6, 11, 11, 10, 9, 16, 11, 11, 11, 11]);
 }
 
 function rocPeriodRangeLabel(range) {
@@ -99,7 +114,7 @@ function buildUnpaidSheet(period, rows) {
       aoa.push([idx + 1, h.unit, h.due, ...cells, rowTotal, Array.from(h.notes).join('；')]);
     });
   aoa.push([`共 ${byUnit.size} 戶`, '合計未繳', '', ...totals, grand, '']);
-  return XLSX.utils.aoa_to_sheet(aoa);
+  return finishSheet(aoa, [8, 10, 13]);
 }
 
 function buildPrepaidSheet(period, rows) {
@@ -134,7 +149,7 @@ function buildPrepaidSheet(period, rows) {
       aoa.push([idx + 1, h.unit, h.due, ...cells, rowTotal, Array.from(h.notes).join('；')]);
     });
   aoa.push([`共 ${byUnit.size} 戶`, '合計預繳', '', ...totals, grand, '']);
-  return XLSX.utils.aoa_to_sheet(aoa);
+  return finishSheet(aoa, [8, 10, 13]);
 }
 
 function buildMonthlyReportWorkbook(period, { incomeRows, unpaidRows, prepaidRows, communityName, range }) {
